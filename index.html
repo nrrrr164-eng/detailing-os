@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DETAILING OS</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b0e0d;color:#f1f5f2;font-family:Arial,sans-serif}
+header{padding:22px 18px;background:#121715;border-bottom:1px solid #26332c}
+.logo{font-size:21px;font-weight:900;letter-spacing:2px}
+.logo span{color:#22c982}
+header small{display:block;color:#84958b;margin-top:6px}
+main{padding:18px;max-width:1000px;margin:auto}
+h2{font-size:21px;margin:10px 0 18px}
+.date{color:#829187;font-size:13px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.card{background:#151c19;border:1px solid #26352e;border-radius:14px;padding:16px}
+.card small{color:#91a198;font-size:12px}
+.value{font-size:25px;font-weight:bold;margin-top:12px}
+.green{color:#27d18a}
+.section{margin-top:28px}
+.action{display:block;width:100%;text-align:left;padding:17px;margin:10px 0;background:#151c19;color:white;border:1px solid #29382f;border-radius:12px;font-size:15px}
+.action:active{background:#20372b}
+nav{position:sticky;bottom:0;background:#111815;border-top:1px solid #29352e;display:flex;justify-content:space-around;padding:13px 3px}
+nav button{background:none;border:0;color:#a3b1a8;font-size:11px}
+nav button span{display:block;font-size:20px;margin-bottom:5px}
+nav button.active{color:#27d18a}
+#content{padding-bottom:30px}
+input,select{width:100%;padding:13px;margin:7px 0;background:#202923;color:white;border:1px solid #3a4b40;border-radius:9px}
+.primary{background:#1c9b68;color:white;border:0;border-radius:10px;padding:14px;width:100%;font-weight:bold;margin-top:10px}
+.item{padding:14px;background:#151c19;border-radius:10px;margin:9px 0;border:1px solid #29382f}
+.muted{color:#8b9b91;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">DETAILING <span>OS</span></div>
+<small>СИСТЕМА УПРАВЛЕНИЯ ДЕТЕЙЛИНГ-ЦЕНТРОМ</small>
+</header>
+<main id="content"></main>
+<nav>
+<button class="active" onclick="page('home',this)"><span>⌂</span>Главная</button>
+<button onclick="page('orders',this)"><span>▣</span>Заказы</button>
+<button onclick="page('clients',this)"><span>♙</span>Клиенты</button>
+<button onclick="page('finance',this)"><span>€</span>Финансы</button>
+</nav>
+<script>
+let orders=JSON.parse(localStorage.getItem('dos_orders')||'[]');
+let clients=JSON.parse(localStorage.getItem('dos_clients')||'[]');
+let expenses=JSON.parse(localStorage.getItem('dos_expenses')||'[]');
+function save(){
+localStorage.setItem('dos_orders',JSON.stringify(orders));
+localStorage.setItem('dos_clients',JSON.stringify(clients));
+localStorage.setItem('dos_expenses',JSON.stringify(expenses));
+}
+function money(n){return '€'+Number(n||0).toFixed(2)}
+function page(name,btn){
+document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+if(btn)btn.classList.add('active');
+let c=document.getElementById('content');
+if(name==='home'){
+let revenue=orders.filter(o=>o.status==='Готов').reduce((s,o)=>s+Number(o.price),0);
+let costs=expenses.reduce((s,e)=>s+Number(e.amount),0);
+c.innerHTML=`<div class="date">ПАНЕЛЬ РУКОВОДИТЕЛЯ</div>
+<h2>Обзор центра</h2>
+<div class="grid">
+<div class="card"><small>Выручка</small><div class="value green">${money(revenue)}</div></div>
+<div class="card"><small>Расходы</small><div class="value">${money(costs)}</div></div>
+<div class="card"><small>Всего заказов</small><div class="value">${orders.length}</div></div>
+<div class="card"><small>Клиентов</small><div class="value">${clients.length}</div></div>
+</div>
+<div class="section"><h2>Быстрые действия</h2>
+<button class="action" onclick="page('neworder')">＋ Создать заказ</button>
+<button class="action" onclick="page('newclient')">＋ Добавить клиента</button>
+<button class="action" onclick="page('newexpense')">＋ Записать расход</button>
+</div>
+<div class="section"><h2>Последние заказы</h2>${orders.slice(-4).reverse().map(o=>`<div class="item">${o.car}<div class="muted">${o.client} · ${o.status} · ${money(o.price)}</div></div>`).join('')||'<p class="muted">Заказов пока нет</p>'}</div>`;
+}
+if(name==='orders'){
+c.innerHTML=`<h2>Заказы</h2><button class="primary" onclick="page('neworder')">＋ Новый заказ</button>${orders.map((o,i)=>`<div class="item"><b>${o.car}</b><div class="muted">${o.client} · ${money(o.price)}</div><p>${o.service} · ${o.status}</p><button onclick="status(${i})" class="primary">Изменить статус</button></div>`).join('')||'<p class="muted">Список заказов пуст</p>'}`;
+}
+if(name==='clients'){
+c.innerHTML=`<h2>Клиенты</h2><button class="primary" onclick="page('newclient')">＋ Новый клиент</button>${clients.map(x=>`<div class="item"><b>${x.name}</b><div class="muted">${x.phone}</div><div>${x.car}</div></div>`).join('')||'<p class="muted">Клиентов пока нет</p>'}`;
+}
+if(name==='finance'){
+let revenue=orders.filter(o=>o.status==='Готов').reduce((s,o)=>s+Number(o.price),0);
+let costs=expenses.reduce((s,e)=>s+Number(e.amount),0);
+c.innerHTML=`<h2>Финансы</h2><div class="grid"><div class="card"><small>Выручка</small><div class="value green">${money(revenue)}</div></div><div class="card"><small>Расходы</small><div class="value">${money(costs)}</div></div><div class="card"><small>Разница</small><div class="value">${money(revenue-costs)}</div></div></div><button class="primary" onclick="page('newexpense')">＋ Добавить расход</button><h2 class="section">Расходы</h2>${expenses.map(e=>`<div class="item">${e.title}<b style="float:right">${money(e.amount)}</b></div>`).join('')||'<p class="muted">Расходов пока нет</p>'}`;
+}
+if(name==='neworder'){
+c.innerHTML=`<h2>Новый заказ</h2><input id="client" placeholder="Имя клиента"><input id="car" placeholder="Автомобиль"><input id="service" placeholder="Услуга"><input id="price" type="number" placeholder="Стоимость (€)"><select id="status"><option>Запланирован</option><option>В работе</option><option>Готов</option></select><button class="primary" onclick="addOrder()">Сохранить заказ</button><button class="action" onclick="page('orders')">Назад</button>`;
+}
+if(name==='newclient'){
+c.innerHTML=`<h2>Новый клиент</h2><input id="name" placeholder="Имя клиента"><input id="phone" placeholder="Телефон"><input id="car" placeholder="Автомобиль"><button class="primary" onclick="addClient()">Сохранить клиента</button><button class="action" onclick="page('clients')">Назад</button>`;
+}
+if(name==='newexpense'){
+c.innerHTML=`<h2>Новый расход</h2><input id="title" placeholder="Название расхода"><input id="amount" type="number" placeholder="Сумма (€)"><button class="primary" onclick="addExpense()">Сохранить расход</button><button class="action" onclick="page('finance')">Назад</button>`;
+}
+}
+function addOrder(){
+let o={client:client.value.trim(),car:car.value.trim(),service:service.value.trim(),price:Number(price.value),status:status.value};
+if(!o.client||!o.car||!o.service||o.price<=0)return alert('Заполни все поля');
+orders.push(o);save();page('orders');
+}
+function addClient(){
+let x={name:name.value.trim(),phone:phone.value.trim(),car:car.value.trim()};
+if(!x.name)return alert('Введи имя клиента');
+clients.push(x);save();page('clients');
+}
+function addExpense(){
+let e={title:title.value.trim(),amount:Number(amount.value)};
+if(!e.title||e.amount<=0)return alert('Заполни все поля');
+expenses.push(e);save();page('finance');
+}
+function status(i){
+let all=['Запланирован','В работе','Готов'];
+orders[i].status=all[(all.indexOf(orders[i].status)+1)%3];
+save();page('orders');
+}
+page('home');
+</script>
+</body>
+</html>
