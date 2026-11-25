@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b100e">
+<title>DETAILING OS</title>
+<style>
+:root{--bg:#0b100e;--panel:#141c18;--panel2:#1b2620;--line:#2b3a31;--text:#edf5ef;--muted:#91a197;--green:#25cc88;--red:#ff6868}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+header{position:sticky;top:0;z-index:5;background:#111915;border-bottom:1px solid var(--line);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-size:21px;font-weight:900;letter-spacing:1.5px}.brand span{color:var(--green)}header small{display:block;color:var(--muted);font-size:10px;letter-spacing:1px;margin-top:4px}
+select,input,textarea{font:inherit;background:#0f1712;color:var(--text);border:1px solid #34463a;border-radius:9px;padding:12px;width:100%;margin:5px 0 11px}
+select{max-width:190px;margin:0;color:var(--green)}button{font:inherit;border:0;border-radius:9px;padding:11px 14px;background:var(--green);color:#062014;font-weight:700;cursor:pointer;margin:3px}
+button.secondary{background:#26352c;color:var(--text)}button.danger{background:#512b2b;color:#ffdede}
+main{max-width:900px;margin:auto;padding:18px 14px 100px}.muted{color:var(--muted)}h1{font-size:24px;margin:5px 0 15px}h2{font-size:17px;margin:22px 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}.card,.item,.formbox{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:14px;margin:9px 0}
+.metric{font-size:23px;font-weight:800;margin-top:8px}.actions{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}
+.itemhead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.pill{font-size:11px;padding:5px 8px;border-radius:20px;background:#24382d;color:var(--green);white-space:nowrap}
+nav{position:fixed;bottom:0;left:0;right:0;background:#111915;border-top:1px solid var(--line);display:flex;justify-content:space-around;z-index:6;padding:7px 3px calc(7px + env(safe-area-inset-bottom))}
+nav button{background:none;color:var(--muted);font-size:11px;padding:7px 3px;min-width:0;flex:1}nav button.active{color:var(--green)}
+.empty{color:var(--muted);padding:18px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+label{font-size:12px;color:var(--muted)}.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}
+.small{font-size:12px}.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header><div><div class="brand">DETAILING <span>OS</span></div><small>УПРАВЛЕНИЕ ДЕТЕЙЛИНГ-ЦЕНТРОМ</small></div><select id="roleSelect" aria-label="Режим"><option value="owner">Владелец</option><option value="manager">Управляющий</option></select></header>
+<main id="app"></main>
+<nav>
+<button data-page="home" class="active">⌂<br>Главная</button>
+<button data-page="orders">▣<br>Заказы</button>
+<button data-page="clients">♙<br>Клиенты</button>
+<button data-page="tasks">✓<br>Задачи</button>
+<button data-page="finance">₼<br>Финансы</button>
+</nav>
+<script>
+const KEY='detailing_os_v2';
+const fresh=()=>({clients:[],orders:[],tasks:[],expenses:[]});
+let db;try{db=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){db=fresh()}
+let role='owner',page='home',selectedClient=null;
+const app=document.getElementById('app');
+const money=n=>new Intl.NumberFormat('ru-MD',{style:'currency',currency:'MDL',maximumFractionDigits:0}).format(Number(n)||0);
+const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
+const id=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const go=p=>{page=p;render()};
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
+document.getElementById('roleSelect').addEventListener('change',e=>{role=e.target.value;render()});
+function card(label,value){return `<div class="card"><div class="muted small">${label}</div><div class="metric">${value}</div></div>`}
+function orderHtml(o){let c=db.clients.find(x=>x.id===o.clientId);return `<div class="item"><div class="itemhead"><b>${esc(c?.name||'Клиент удалён')} · ${esc(o.car)}</b><span class="pill">${esc(o.status)}</span></div><div>${esc(o.service)} · <b>${money(o.price)}</b></div><div class="muted small">${esc(o.date||'')}</div><div class="actions"><button class="secondary" onclick="cycleOrder('${o.id}')">Изменить статус</button></div></div>`}
+function clientHtml(c){let count=db.orders.filter(o=>o.clientId===c.id).length;return `<div class="item"><div class="itemhead"><b>${esc(c.name)}</b><span class="pill">${count} заказ(ов)</span></div><div class="muted">${esc(c.phone||'Телефон не указан')}</div><div class="actions"><button class="secondary" onclick="openClient('${c.id}')">История работ</button></div></div>`}
+function taskHtml(t){return `<div class="item"><div class="itemhead"><b>${esc(t.title)}</b><span class="pill">${esc(t.status)}</span></div><div class="muted small">${esc(t.assignee||'Без исполнителя')} · ${esc(t.due||'Без срока')}</div><div>${esc(t.note||'')}</div><button class="secondary" onclick="toggleTask('${t.id}')">Изменить статус</button></div>`}
+function render(){
+document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+if(page==='home'){
+let rev=db.orders.filter(o=>o.status==='Готов').reduce((s,o)=>s+Number(o.price),0),ex=db.expenses.reduce((s,e)=>s+Number(e.amount),0);
+app.innerHTML=`<h1>Главная</h1><div class="grid">${card('Клиенты',db.clients.length)}${card('Всего заказов',db.orders.length)}${card('Открытые задачи',db.tasks.filter(t=>t.status!=='Выполнена').length)}${role==='owner'?card('Выручка · MDL',money(rev)):''}</div><h2>Быстрые действия</h2><div class="actions"><button onclick="go('neworder')">＋ Новый заказ</button><button class="secondary" onclick="go('newclient')">＋ Клиент</button><button class="secondary" onclick="go('newtask')">＋ Задача</button>${role==='owner'?'<button class="secondary" onclick="go(&quot;newexpense&quot;)">＋ Расход</button>':''}</div><h2>Последние заказы</h2>${db.orders.length?db.orders.slice().reverse().slice(0,5).map(orderHtml).join(''):'<div class="empty">Заказов пока нет. Добавь первого клиента и создай заказ.</div>'}`;
+}else if(page==='orders'){
+app.innerHTML=`<h1>Заказы</h1><button onclick="go('neworder')">＋ Создать заказ</button>${db.orders.length?db.orders.slice().reverse().map(orderHtml).join(''):'<div class="empty">Заказов пока нет</div>'}`;
+}else if(page==='clients'){
+app.innerHTML=`<h1>Клиенты</h1><button onclick="go('newclient')">＋ Добавить клиента</button><input id="clientSearch" placeholder="Поиск по имени или телефону" oninput="filterClients()">${db.clients.length?db.clients.map(clientHtml).join(''):'<div class="empty">Клиентов пока нет</div>'}`;
+}else if(page==='client'){
+let c=db.clients.find(x=>x.id===selectedClient);if(!c){go('clients');return}
+let hist=db.orders.filter(o=>o.clientId===c.id),sum=hist.reduce((s,o)=>s+Number(o.price),0);
+app.innerHTML=`<button class="secondary" onclick="go('clients')">← К списку клиентов</button><h1>${esc(c.name)}</h1><div class="muted">${esc(c.phone||'')}</div><p>${esc(c.note||'')}</p><div class="card">История работ: <b>${hist.length}</b> · Сумма заказов: <b>${money(sum)}</b></div><h2>Заказы клиента</h2>${hist.length?hist.slice().reverse().map(orderHtml).join(''):'<div class="empty">Истории пока нет</div>'}`;
+}else if(page==='tasks'){
+app.innerHTML=`<h1>Задачи</h1><button onclick="go('newtask')">＋ Поставить задачу</button>${db.tasks.length?db.tasks.slice().reverse().map(taskHtml).join(''):'<div class="empty">Задач пока нет</div>'}`;
+}else if(page==='finance'){
+if(role!=='owner'){app.innerHTML='<h1>Финансы</h1><div class="empty">Подробные финансовые отчёты доступны только в режиме владельца.</div>';return}
+let rev=db.orders.filter(o=>o.status==='Готов').reduce((s,o)=>s+Number(o.price),0),ex=db.expenses.reduce((s,e)=>s+Number(e.amount),0);
+app.innerHTML=`<h1>Финансы · MDL</h1><div class="grid">${card('Выручка готовых заказов',money(rev))}${card('Расходы',money(ex))}${card('Разница',money(rev-ex))}</div><button onclick="go('newexpense')">＋ Добавить расход</button><h2>Расходы</h2>${db.expenses.length?db.expenses.slice().reverse().map(e=>`<div class="item"><b>${esc(e.title)}</b><div>${money(e.amount)} · ${esc(e.date)}</div></div>`).join(''):'<div class="empty">Расходов пока нет</div>'}`;
+}else if(page==='newclient'){
+app.innerHTML=`<h1>Новый клиент</h1><div class="formbox"><label>Имя клиента *</label><input id="cName" placeholder="Имя и фамилия"><label>Телефон</label><input id="cPhone" placeholder="+373..."><label>Заметка</label><textarea id="cNote" placeholder="Дополнительная информация"></textarea><button onclick="addClient()">Сохранить клиента</button><button class="secondary" onclick="go('clients')">Отмена</button></div>`;
+}else if(page==='neworder'){
+if(!db.clients.length){app.innerHTML='<h1>Новый заказ</h1><div class="empty">Сначала добавь клиента.</div><button onclick="go(&quot;newclient&quot;)">＋ Добавить клиента</button>';return}
+app.innerHTML=`<h1>Новый заказ</h1><div class="formbox"><label>Клиент *</label><select id="oClient">${db.clients.map(c=>`<option value="${c.id}">${esc(c.name)} · ${esc(c.phone||'')}</option>`).join('')}</select><label>Автомобиль *</label><input id="oCar" placeholder="Например, BMW X5"><label>Услуга *</label><input id="oService" placeholder="Например, полировка кузова"><label>Цена, MDL *</label><input id="oPrice" type="number" min="0" placeholder="0"><label>Дата</label><input id="oDate" type="date" value="${new Date().toISOString().slice(0,10)}"><label>Примечание</label><textarea id="oNote"></textarea><button onclick="addOrder()">Сохранить заказ</button><button class="secondary" onclick="go('orders')">Отмена</button></div>`;
+}else if(page==='newtask'){
+app.innerHTML=`<h1>Новая задача</h1><div class="formbox"><label>Название задачи *</label><input id="tTitle" placeholder="Что нужно сделать?"><label>Исполнитель</label><input id="tAssignee" placeholder="Имя сотрудника"><label>Срок</label><input id="tDue" type="date"><label>Описание</label><textarea id="tNote"></textarea><button onclick="addTask()">Сохранить задачу</button><button class="secondary" onclick="go('tasks')">Отмена</button></div>`;
+}else if(page==='newexpense'){
+if(role!=='owner'){go('home');return}
+app.innerHTML=`<h1>Новый расход</h1><div class="formbox"><label>Название расхода *</label><input id="eTitle" placeholder="Материалы, аренда..."><label>Сумма, MDL *</label><input id="eAmount" type="number" min="0" placeholder="0"><label>Дата</label><input id="eDate" type="date" value="${new Date().toISOString().slice(0,10)}"><button onclick="addExpense()">Сохранить расход</button><button class="secondary" onclick="go('finance')">Отмена</button></div>`;
+}}
+function val(id){return document.getElementById(id)?.value?.trim()||''}
+function addClient(){let name=val('cName');if(!name)return alert('Введи имя клиента');db.clients.push({id:id(),name,phone:val('cPhone'),note:val('cNote')});save();go('clients')}
+function addOrder(){let clientId=val('oClient'),car=val('oCar'),service=val('oService'),price=Number(val('oPrice'));if(!clientId||!car||!service||!val('oPrice')||price<0)return alert('Заполни клиента, автомобиль, услугу и цену');db.orders.push({id:id(),clientId,car,service,price,date:val('oDate'),note:val('oNote'),status:'Запланирован'});save();go('orders')}
+function addTask(){let title=val('tTitle');if(!title)return alert('Введи название задачи');db.tasks.push({id:id(),title,assignee:val('tAssignee'),due:val('tDue'),note:val('tNote'),status:'Открыта'});save();go('tasks')}
+function addExpense(){let title=val('eTitle'),amount=Number(val('eAmount'));if(!title||!val('eAmount')||amount<0)return alert('Заполни название и сумму');db.expenses.push({id:id(),title,amount,date:val('eDate')});save();go('finance')}
+function openClient(x){selectedClient=x;go('client')}
+function cycleOrder(x){let o=db.orders.find(o=>o.id===x);if(!o)return;let a=['Запланирован','В работе','Готов'];o.status=a[(a.indexOf(o.status)+1)%a.length];save();render()}
+function toggleTask(x){let t=db.tasks.find(t=>t.id===x);if(!t)return;t.status=t.status==='Выполнена'?'Открыта':'Выполнена';save();render()}
+function filterClients(){let q=val('clientSearch').toLowerCase();document.querySelectorAll('.item').forEach(el=>el.classList.toggle('hidden',!el.innerText.toLowerCase().includes(q)))}
+render();
+</script>
+</body></html>
